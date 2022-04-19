@@ -850,9 +850,12 @@ ExecuteResult execute_statement(Statement* statement, Table* table) {
   }
 }
 
+/*
+ * argv[1] = db文件路径
+ */
 int main(int argc, char* argv[]) {
   if (argc < 2) {
-    printf("Must supply a database filename.\n");
+    printf("需要指定数据库文件路径\n");
     exit(EXIT_FAILURE);
   }
 
