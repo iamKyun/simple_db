@@ -75,7 +75,7 @@ typedef struct {
   Table* table;
   uint32_t page_num;
   uint32_t cell_num;
-  bool end_of_table;  // Indicates a position one past the last element
+  bool end_of_table;  // 标识最后一个元素
 } Cursor;
 
 void print_row(Row* row) {
@@ -500,6 +500,7 @@ Table* db_open(const char* filename) {
   return table;
 }
 
+// 指令输入缓冲区
 InputBuffer* new_input_buffer() {
   InputBuffer* input_buffer = malloc(sizeof(InputBuffer));
   input_buffer->buffer = NULL;
@@ -509,18 +510,20 @@ InputBuffer* new_input_buffer() {
   return input_buffer;
 }
 
+// 打印提示符
 void print_prompt() { printf("db > "); }
 
+// 读取指令输入
 void read_input(InputBuffer* input_buffer) {
   ssize_t bytes_read =
       getline(&(input_buffer->buffer), &(input_buffer->buffer_length), stdin);
 
   if (bytes_read <= 0) {
-    printf("Error reading input\n");
+    printf("读取用户输入时发生错误\n");
     exit(EXIT_FAILURE);
   }
 
-  // Ignore trailing newline
+  // 忽略换行符
   input_buffer->input_length = bytes_read - 1;
   input_buffer->buffer[bytes_read - 1] = 0;
 }
@@ -860,13 +863,18 @@ int main(int argc, char* argv[]) {
   }
 
   char* filename = argv[1];
+  // 打开数据库文件
   Table* table = db_open(filename);
 
+  // 新建指令输入缓冲区
   InputBuffer* input_buffer = new_input_buffer();
+
+  // REPL 循环接收指令
   while (true) {
     print_prompt();
     read_input(input_buffer);
 
+    // '.'开头的输入判定为元指令
     if (input_buffer->buffer[0] == '.') {
       switch (do_meta_command(input_buffer, table)) {
         case (META_COMMAND_SUCCESS):
@@ -878,6 +886,7 @@ int main(int argc, char* argv[]) {
     }
 
     Statement statement;
+    // 分析语句
     switch (prepare_statement(input_buffer, &statement)) {
       case (PREPARE_SUCCESS):
         break;
@@ -896,6 +905,7 @@ int main(int argc, char* argv[]) {
         continue;
     }
 
+    // 执行语句
     switch (execute_statement(&statement, table)) {
       case (EXECUTE_SUCCESS):
         printf("Executed.\n");
