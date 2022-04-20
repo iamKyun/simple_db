@@ -18,6 +18,7 @@ typedef enum {
   EXECUTE_DUPLICATE_KEY,
 } ExecuteResult;
 
+// 元指令执行结果：[成功, 未识别命令]
 typedef enum {
   META_COMMAND_SUCCESS,
   META_COMMAND_UNRECOGNIZED_COMMAND
@@ -31,6 +32,7 @@ typedef enum {
   PREPARE_UNRECOGNIZED_STATEMENT
 } PrepareResult;
 
+// SQL语句类型
 typedef enum { STATEMENT_INSERT, STATEMENT_SELECT } StatementType;
 
 #define COLUMN_USERNAME_SIZE 32
@@ -43,7 +45,7 @@ typedef struct {
 
 typedef struct {
   StatementType type;
-  Row row_to_insert;  // only used by insert statement
+  Row row_to_insert;  // 只有在 INSERT 时才有效
 } Statement;
 
 #define size_of_attribute(Struct, Attribute) sizeof(((Struct*)0)->Attribute)
@@ -522,6 +524,7 @@ void read_input(InputBuffer *input_buffer) {
   input_buffer->buffer[bytes_read - 1] = 0;
 }
 
+// 释放输入缓冲区内存
 void close_input_buffer(InputBuffer *input_buffer) {
   free(input_buffer->buffer);
   free(input_buffer);
@@ -549,6 +552,7 @@ void pager_flush(Pager *pager, uint32_t page_num) {
   }
 }
 
+// 关闭数据库
 void db_close(Table *table) {
   Pager *pager = table->pager;
 
@@ -630,11 +634,15 @@ PrepareResult prepare_insert(InputBuffer *input_buffer, Statement *statement) {
   return PREPARE_SUCCESS;
 }
 
+// 分析语句语法并返回分析结果
 PrepareResult prepare_statement(InputBuffer *input_buffer,
                                 Statement *statement) {
+  // insert
   if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
     return prepare_insert(input_buffer, statement);
   }
+
+  // select
   if (strcmp(input_buffer->buffer, "select") == 0) {
     statement->type = STATEMENT_SELECT;
     return PREPARE_SUCCESS;
@@ -884,23 +892,22 @@ int main(int argc, char *argv[]) {
     // 分析语句
     switch (prepare_statement(input_buffer, &statement)) {
       case (PREPARE_SUCCESS):break;
-      case (PREPARE_NEGATIVE_ID):printf("ID must be positive.\n");
+      case (PREPARE_NEGATIVE_ID):printf("ID需要为正整数\n");
         continue;
-      case (PREPARE_STRING_TOO_LONG):printf("String is too long.\n");
+      case (PREPARE_STRING_TOO_LONG):printf("字符串太长\n");
         continue;
-      case (PREPARE_SYNTAX_ERROR):printf("Syntax error. Could not parse statement.\n");
+      case (PREPARE_SYNTAX_ERROR):printf("语法错误\n");
         continue;
       case (PREPARE_UNRECOGNIZED_STATEMENT):
-        printf("Unrecognized keyword at start of '%s'.\n",
-               input_buffer->buffer);
+        printf("为识别关键字： '%s'.\n", input_buffer->buffer);
         continue;
     }
 
     // 执行语句
     switch (execute_statement(&statement, table)) {
-      case (EXECUTE_SUCCESS):printf("Executed.\n");
+      case (EXECUTE_SUCCESS):printf("执行成功\n");
         break;
-      case (EXECUTE_DUPLICATE_KEY):printf("Error: Duplicate key.\n");
+      case (EXECUTE_DUPLICATE_KEY):printf("错误: 重复Key\n");
         break;
     }
   }
